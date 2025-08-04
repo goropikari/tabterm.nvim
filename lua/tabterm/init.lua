@@ -134,6 +134,75 @@ local function update_winbar()
   vim.api.nvim_set_option_value('winbar', winbar_text, { win = M.state.winid })
 end
 
+local function show_help()
+  local help_content = {
+    'TabTerm Help',
+    '',
+    'Keymaps (Normal Mode in Terminal):',
+    '  ' .. get_keymap('toggle') .. ' : Toggle terminal window',
+    '  ' .. get_keymap('add') .. ' : Add a new terminal tab',
+    '  ' .. get_keymap('shutdown') .. ' : Close the current terminal tab',
+    '  ' .. get_keymap('move_next_tab') .. ' : Move to the next terminal tab',
+    '  ' .. get_keymap('move_prev_tab') .. ' : Move to the previous terminal tab',
+    '  ? : Show this help',
+    '',
+    'Keymaps (Normal/Visual Mode in other buffers):',
+    '  ' .. get_keymap('send_line') .. ' : Send current line/selection to terminal',
+    '',
+    'Press "q" or move to another window to close.',
+  }
+
+  local width = 0
+  for _, line in ipairs(help_content) do
+    if vim.fn.strwidth(line) > width then
+      width = vim.fn.strwidth(line)
+    end
+  end
+  width = width + 4 -- padding
+
+  local height = #help_content + 2 -- padding
+
+  local win_width = vim.api.nvim_get_option_value('columns', {})
+  local win_height = vim.api.nvim_get_option_value('lines', {})
+
+  local row = math.floor((win_height - height) / 2)
+  local col = math.floor((win_width - width) / 2)
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, help_content)
+
+  local help_win = vim.api.nvim_open_win(buf, true, {
+    relative = 'editor',
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = 'minimal',
+    border = 'single',
+  })
+
+  vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf })
+  vim.api.nvim_set_option_value('filetype', 'help', { buf = buf })
+
+  -- Close window with 'q'
+  vim.keymap.set('n', 'q', function()
+    if vim.api.nvim_win_is_valid(help_win) then
+      vim.api.nvim_win_close(help_win, true)
+    end
+  end, { buffer = buf, silent = true })
+
+  -- Close on leaving the window
+  vim.api.nvim_create_autocmd('WinLeave', {
+    buffer = buf,
+    once = true,
+    callback = function()
+      if vim.api.nvim_win_is_valid(help_win) then
+        vim.api.nvim_win_close(help_win, true)
+      end
+    end,
+  })
+end
+
 local function set_add_terminal_keymap(term)
   local bufnr = term.bufnr
   if vim.api.nvim_buf_is_valid(bufnr) then
@@ -149,6 +218,9 @@ local function set_add_terminal_keymap(term)
     vim.keymap.set({ 'n' }, get_keymap('shutdown'), function()
       M.shutdown_term(term)
     end, { buffer = bufnr, desc = 'Shutdown Terminal' })
+    vim.keymap.set({ 'n' }, '?', function()
+      show_help()
+    end, { buffer = bufnr, desc = 'Show Help' })
   end
 end
 
