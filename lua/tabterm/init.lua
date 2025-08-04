@@ -14,13 +14,16 @@ local M = {
 ---@class TabTermConfig
 ---@field shell string
 ---@field height number
----@field keymap {toggle: string, add: string}
+---@field keymap {toggle: string, add: string, move_next_tab: string, move_prev_tab: string, shutdown: string}
 local default_config = {
   shell = vim.o.shell or 'bash',
   height = 0.4,
   keymap = {
     toggle = '<c-t>',
     add = '<c-n>',
+    shutdown = '<M-w>',
+    move_next_tab = '<M-n>',
+    move_prev_tab = '<M-h>',
   },
 }
 
@@ -28,11 +31,16 @@ local default_config = {
 ---@diagnostic disable-next-line
 local config = {}
 
+---@param key string
+local function get_keymap(key)
+  return config.keymap[key]
+end
+
 ---@param opts TabTermConfig
 function M.setup(opts)
   config = vim.tbl_deep_extend('force', default_config, opts or {})
 
-  vim.keymap.set('n', config.keymap.toggle, function()
+  vim.keymap.set({ 'n', 't' }, get_keymap('toggle'), function()
     M.toggle()
   end, { desc = 'Toggle Terminal' })
 end
@@ -76,9 +84,18 @@ end
 local function set_add_terminal_keymap(term)
   local bufnr = term.bufnr
   if vim.api.nvim_buf_is_valid(bufnr) then
-    vim.keymap.set('n', config.keymap.add, function()
+    vim.keymap.set({ 'n', 't' }, get_keymap('add'), function()
       M.new_terminal()
     end, { buffer = bufnr, desc = 'Add Terminal' })
+    vim.keymap.set({ 'n' }, get_keymap('move_next_tab'), function()
+      M.move_next_tab()
+    end, { buffer = bufnr, desc = 'Move to Next Terminal' })
+    vim.keymap.set({ 'n' }, get_keymap('move_prev_tab'), function()
+      M.move_prev_tab()
+    end, { buffer = bufnr, desc = 'Move to Previous Terminal' })
+    vim.keymap.set({ 'n' }, get_keymap('shutdown'), function()
+      M.shutdown_term(term)
+    end, { buffer = bufnr, desc = 'Shutdown Terminal' })
   end
 end
 
@@ -164,6 +181,34 @@ local function reset_current_term()
   M.state.current_term = nil
 end
 
+function M.move_next_tab()
+  if not is_win_open() then
+    return
+  end
+
+  local terms = toggleterm.get_all()
+  local index = index_of_term(M.state.current_term)
+  local next_index = (index + 1) % (#terms + 1)
+  if next_index == 0 then
+    next_index = next_index + 1
+  end
+  set_current_term(terms[next_index])
+end
+
+function M.move_prev_tab()
+  if not is_win_open() then
+    return
+  end
+
+  local terms = toggleterm.get_all()
+  local index = index_of_term(M.state.current_term)
+  local prev_index = (index - 1) % #terms
+  if prev_index == 0 then
+    prev_index = #terms
+  end
+  set_current_term(terms[prev_index])
+end
+
 local function next_open_term(term)
   local open_term = nil
   local index = index_of_term(term)
@@ -189,6 +234,8 @@ local function shutdown_term(term)
   term:shutdown()
 end
 
+M.shutdown_term = shutdown_term
+
 function M.winbar_click_handler(minwid, clicks, button, mods)
   local term = toggleterm.get(minwid)
   if term == nil then
@@ -208,6 +255,7 @@ function M.winbar_click_handler(minwid, clicks, button, mods)
       if input and input ~= '' then
         term.display_name = input
       end
+      update_winbar()
     end)
   end
   update_winbar()
