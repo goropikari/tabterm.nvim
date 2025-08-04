@@ -14,7 +14,7 @@ local M = {
 ---@class TabTermConfig
 ---@field shell string
 ---@field height number
----@field keymap {toggle: string, add: string, move_next_tab: string, move_prev_tab: string, shutdown: string}
+---@field keymap {toggle: string, add: string, move_next_tab: string, move_prev_tab: string, shutdown: string, send_visual: string, send_line: string}
 local default_config = {
   shell = vim.o.shell or 'bash',
   height = 0.4,
@@ -24,6 +24,8 @@ local default_config = {
     shutdown = '<M-w>',
     move_next_tab = '<M-n>',
     move_prev_tab = '<M-h>',
+    send_visual = '<leader>ss',
+    send_line = '<leader>ss',
   },
 }
 
@@ -36,6 +38,13 @@ local function get_keymap(key)
   return config.keymap[key]
 end
 
+local function get_current_term()
+  if M.state.current_term and toggleterm.get(M.state.current_term.id) then
+    return M.state.current_term
+  end
+  return nil
+end
+
 ---@param opts TabTermConfig
 function M.setup(opts)
   config = vim.tbl_deep_extend('force', default_config, opts or {})
@@ -43,12 +52,56 @@ function M.setup(opts)
   vim.keymap.set({ 'n', 't' }, get_keymap('toggle'), function()
     M.toggle()
   end, { desc = 'Toggle Terminal' })
+  vim.keymap.set({ 'v' }, get_keymap('send_visual'), function()
+    M.send_visual_text()
+  end, { desc = 'Send Visual Text to Terminal' })
+  vim.keymap.set({ 'n' }, get_keymap('send_line'), function()
+    M.send_line_text()
+  end, { desc = 'Send Current Line to Terminal' })
 end
 
 ---@return boolean
 local function is_win_open()
   ---@diagnostic disable-next-line
   return M.state.winid and vim.api.nvim_win_is_valid(M.state.winid)
+end
+
+local function get_visual_lines(opts)
+  if vim.fn.mode() == 'n' then -- command から使う用
+    return vim.fn.getline(opts.line1, opts.line2)
+  else -- <leader> key を使った keymap 用
+    local lines = vim.fn.getregion(vim.fn.getpos('v'), vim.fn.getpos('.'), { type = vim.fn.mode() })
+    -- https://github.com/neovim/neovim/discussions/26092
+    vim.cmd([[ execute "normal! \<ESC>" ]])
+    return lines
+  end
+end
+
+local function get_visual_text(opts)
+  local texts = get_visual_lines(opts or {})
+  return vim.fn.join(texts, '\n')
+end
+
+function M.send_line_text()
+  local term = get_current_term()
+  if term == nil then
+    term = M.new_terminal()
+    M.open()
+  end
+  local line = vim.api.nvim_get_current_line()
+
+  term:send(line)
+end
+
+function M.send_visual_text()
+  local term = get_current_term()
+  if term == nil then
+    term = M.new_terminal()
+    M.open()
+  end
+  local text = get_visual_text()
+
+  term:send(text)
 end
 
 ---@param term Terminal
@@ -263,6 +316,8 @@ end
 
 local toggleterm_pattern = { 'term://*#toggleterm#*', 'term://*::toggleterm::*' }
 
+-- ctrl-d でターミナルが閉じられても、他にターミナルがあればそっちに切り替えるようにする。
+-- この処理を入れないと window が閉じられてしまう
 vim.api.nvim_create_autocmd('TermClose', {
   pattern = toggleterm_pattern,
   callback = function(args)
@@ -280,9 +335,6 @@ vim.api.nvim_create_autocmd('TermClose', {
 
     local open_term = next_open_term(close_term)
     set_current_term(open_term)
-    -- vim.defer_fn(function()
-    --   update_winbar()
-    -- end, 50)
     vim.schedule(function()
       update_winbar()
     end)
