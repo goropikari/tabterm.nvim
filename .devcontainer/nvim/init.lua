@@ -50,7 +50,10 @@ require('lazy').setup({
     {
       'goropikari/tabterm.nvim',
       dependencies = {
-        'akinsho/toggleterm.nvim',
+        {
+          'akinsho/toggleterm.nvim',
+          version = 'v2.13.1',
+        },
       },
       dev = true,
       opts = {},
