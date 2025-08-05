@@ -27,7 +27,3 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
   },
 }
 ```
-
-## License
-
-MIT
