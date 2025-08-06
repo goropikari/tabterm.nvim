@@ -123,7 +123,7 @@ local function update_winbar()
 
   local winbar_text_format = "%%%d@v:lua.require'tabterm'.winbar_click_handler@[%s]%%T"
   local winbar_text = ''
-  local terms = toggleterm.get_all()
+  local terms = M.get_all_terms()
   for i, term in ipairs(terms) do
     winbar_text = winbar_text .. string.format(winbar_text_format, term.id, term_name(term, term.id == M.state.current_term.id))
     if i < #terms then
@@ -239,12 +239,16 @@ end
 
 M.new_terminal = new_terminal
 
+function M.get_all_terms()
+  return toggleterm.get_all()
+end
+
 local function num_terms()
-  return #toggleterm.get_all()
+  return #M.get_all_terms()
 end
 
 local function index_of_term(term)
-  local terms = toggleterm.get_all()
+  local terms = M.get_all_terms()
   for i, t in ipairs(terms) do
     if t.id == term.id then
       return i
@@ -266,7 +270,7 @@ function M.open()
   if M.state.current_term and toggleterm.get(M.state.current_term.id) then
     open_term = M.state.current_term
   else
-    open_term = toggleterm.get_all()[1]
+    open_term = M.get_all_terms()[1]
   end
 
   local winid = vim.api.nvim_open_win(open_term.bufnr, true, {
@@ -311,7 +315,7 @@ function M.move_next_tab()
     return
   end
 
-  local terms = toggleterm.get_all()
+  local terms = M.get_all_terms()
   local index = index_of_term(M.state.current_term)
   local next_index = (index + 1) % (#terms + 1)
   if next_index == 0 then
@@ -325,7 +329,7 @@ function M.move_prev_tab()
     return
   end
 
-  local terms = toggleterm.get_all()
+  local terms = M.get_all_terms()
   local index = index_of_term(M.state.current_term)
   local prev_index = (index - 1) % #terms
   if prev_index == 0 then
@@ -338,9 +342,9 @@ local function next_open_term(term)
   local open_term = nil
   local index = index_of_term(term)
   if index < num_terms() then
-    open_term = toggleterm.get_all()[index + 1]
+    open_term = M.get_all_terms()[index + 1]
   else
-    open_term = toggleterm.get_all()[index - 1]
+    open_term = M.get_all_terms()[index - 1]
   end
   return open_term
 end
@@ -398,7 +402,7 @@ vim.api.nvim_create_autocmd('TermClose', {
     end
 
     local close_term = nil
-    for _, term in ipairs(toggleterm.get_all()) do
+    for _, term in ipairs(M.get_all_terms()) do
       if term.bufnr == args.buf then
         close_term = term
         break
