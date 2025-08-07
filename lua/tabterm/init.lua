@@ -19,6 +19,9 @@ function M.setup(opts)
   M.config = Config.new():setup(opts or {})
 
   set_keymap({ 'n', 't' }, 'toggle', M.toggle, 'Toggle')
+  set_keymap({ 'n', 't' }, 'add', M.add_term, 'Add Terminal')
+  set_keymap({ 'n', 't' }, 'move_next', M.move_next, 'Move Next Terminal')
+  set_keymap({ 'n', 't' }, 'move_previous', M.move_previous, 'Move Previous Terminal')
   M.new_state()
 end
 
@@ -56,6 +59,25 @@ function M.toggle()
   else
     state:open_win()
   end
+end
+
+function M.add_term()
+  local state = M.get_current_state()
+  assert(M.is_valid_state(state))
+  state:add_term()
+  state:update_winbar()
+end
+
+function M.move_next()
+  local state = M.get_current_state()
+  assert(M.is_valid_state(state))
+  state:move_next()
+end
+
+function M.move_previous()
+  local state = M.get_current_state()
+  assert(M.is_valid_state(state))
+  state:move_previous()
 end
 
 function M.show()

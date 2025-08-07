@@ -13,6 +13,9 @@ function Config.new()
   local obj = {
     keymap = {
       toggle = '<c-t>',
+      add = '<c-n>',
+      move_next = '<M-n>',
+      move_previous = '<M-h>',
     },
   }
 
