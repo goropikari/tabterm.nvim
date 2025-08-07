@@ -1,5 +1,7 @@
+local State = require('tabterm.state')
+
 local M = {
-  state = 0,
+  state = State.new(),
 }
 
 local default_config = {
@@ -27,32 +29,17 @@ function M.setup(opts)
   set_keymap({ 'n' }, 'toggle', M.toggle, 'Toggle')
 end
 
+function M.get_current_state()
+  return M.state
+end
+
 function M.toggle()
-  if M.is_open() then
-    M.close()
+  local state = M.get_current_state()
+  if state:is_win_open() then
+    state:close_win()
   else
-    M.open()
+    state:open_win()
   end
-end
-
-function M.is_open()
-  return M.state == 1
-end
-
-function M.open()
-  if M.is_open() then
-    return
-  end
-  print('open')
-  M.state = 1
-end
-
-function M.close()
-  if not M.is_open() then
-    return
-  end
-  print('close')
-  M.state = 0
 end
 
 return M
