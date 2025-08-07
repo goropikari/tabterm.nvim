@@ -1,7 +1,7 @@
 local State = require('tabterm.state')
 
 local M = {
-  state = nil,
+  state = {},
 }
 
 local default_config = {
@@ -27,26 +27,33 @@ function M.setup(opts)
   config = vim.tbl_deep_extend('force', default_config, opts or {})
 
   set_keymap({ 'n' }, 'toggle', M.toggle, 'Toggle')
-  M.state = State.new()
+  M.new_state()
+end
+
+function M.set_state(state)
+  local tabnr = vim.api.nvim_get_current_tabpage()
+  M.state[tabnr] = state
 end
 
 function M.get_current_state()
-  return M.state
+  local tabnr = vim.api.nvim_get_current_tabpage()
+  return M.state[tabnr]
 end
 
-local function is_valid_state(state)
+function M.is_valid_state(state)
   return state ~= nil and state:is_valid()
 end
 
-local function new_state()
-  M.state = State.new()
-  return M.state
+function M.new_state()
+  local state = State.new()
+  M.set_state(state)
+  return state
 end
 
 function M.toggle()
   local state = M.get_current_state()
-  if not is_valid_state(state) then
-    state = new_state()
+  if not M.is_valid_state(state) then
+    state = M.new_state()
   end
   if state:is_win_open() then
     state:close_win()
