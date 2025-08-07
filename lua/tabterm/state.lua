@@ -1,11 +1,27 @@
+local Config = require('tabterm.config')
+
 State = {}
 
-function State.new()
+---@class TabTerminalState
+---@field winid number|nil
+---@field bufnr number|nil
+---@field config TabTerminalConfig
+---@field is_win_open fun(self: TabTerminalState): boolean
+---@field open_win fun(self: TabTerminalState)
+---@field close_win fun(self: TabTerminalState)
+---@field is_valid fun(self: TabTerminalState): boolean
+---@field show fun(self: TabTerminalState)
+
+---@param cfg TabTerminalConfig
+function State.new(cfg)
   local bufnr = vim.api.nvim_create_buf(false, true)
 
+  ---@type TabTerminalState
+  ---@diagnostic disable-next-line: missing-fields
   local obj = {
     winid = nil,
     bufnr = bufnr,
+    config = cfg or Config.new(),
   }
 
   obj.is_win_open = function(self)

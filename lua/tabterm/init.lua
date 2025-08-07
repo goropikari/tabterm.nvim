@@ -1,51 +1,47 @@
 local State = require('tabterm.state')
+local Config = require('tabterm.config')
 
 local M = {
   state = {},
+  config = nil,
 }
 
-local default_config = {
-  keymap = {
-    toggle = '<c-t>',
-  },
-}
-
-local config = {}
-
-local function get_keymap(key)
-  local keybind = config.keymap[key] or default_config.keymap[key]
-  assert(keybind, 'Keymap not found: ' .. key)
-  return keybind
-end
+---@class TabTerminalOptions
+---@field keymap table<string, string>
 
 local function set_keymap(modes, key, cb, desc)
-  local keymap = get_keymap(key)
+  local keymap = M.config:get_keymap(key)
   vim.keymap.set(modes, keymap, cb, { desc = desc or '' })
 end
 
+---@param opts TabTerminalOptions|nil
 function M.setup(opts)
-  config = vim.tbl_deep_extend('force', default_config, opts or {})
+  M.config = Config.new():setup(opts or {})
 
   set_keymap({ 'n' }, 'toggle', M.toggle, 'Toggle')
   M.new_state()
 end
 
+---@param state TabTerminalState
 function M.set_state(state)
   local tabnr = vim.api.nvim_get_current_tabpage()
   M.state[tabnr] = state
 end
 
+---@return TabTerminalState
 function M.get_current_state()
   local tabnr = vim.api.nvim_get_current_tabpage()
   return M.state[tabnr]
 end
 
+---@return boolean
 function M.is_valid_state(state)
   return state ~= nil and state:is_valid()
 end
 
+---@return TabTerminalState
 function M.new_state()
-  local state = State.new()
+  local state = State.new(M.config)
   M.set_state(state)
   return state
 end
