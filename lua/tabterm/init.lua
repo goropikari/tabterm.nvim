@@ -18,7 +18,7 @@ end
 function M.setup(opts)
   M.config = Config.new():setup(opts or {})
 
-  set_keymap({ 'n' }, 'toggle', M.toggle, 'Toggle')
+  set_keymap({ 'n', 't' }, 'toggle', M.toggle, 'Toggle')
   M.new_state()
 end
 

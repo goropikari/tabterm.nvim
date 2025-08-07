@@ -1,10 +1,20 @@
+local Terminal = require('toggleterm.terminal').Terminal
 local Config = require('tabterm.config')
 
 State = {}
 
+local function new_terminal()
+  local term = Terminal:new({
+    cmd = 'bash',
+  })
+  term:spawn()
+  term.display_name = 'terminal ' .. term.id
+  return term
+end
+
 ---@class TabTerminalState
 ---@field winid number|nil
----@field bufnr number|nil
+---@field current_term Terminal|nil
 ---@field config TabTerminalConfig
 ---@field is_win_open fun(self: TabTerminalState): boolean
 ---@field open_win fun(self: TabTerminalState)
@@ -14,13 +24,13 @@ State = {}
 
 ---@param cfg TabTerminalConfig
 function State.new(cfg)
-  local bufnr = vim.api.nvim_create_buf(false, true)
+  local term = new_terminal()
 
   ---@type TabTerminalState
   ---@diagnostic disable-next-line: missing-fields
   local obj = {
     winid = nil,
-    bufnr = bufnr,
+    current_term = term,
     config = cfg or Config.new(),
   }
 
@@ -33,12 +43,12 @@ function State.new(cfg)
     if self:is_win_open() then
       return
     end
-    self.winid = vim.api.nvim_open_win(self.bufnr, true, {
+    local bufnr = self.current_term.bufnr
+    self.winid = vim.api.nvim_open_win(bufnr, true, {
       split = 'below',
       height = math.floor(vim.o.lines * height),
       style = 'minimal',
     })
-    vim.api.nvim_buf_set_lines(bufnr, -2, -1, false, { 'This is a tab terminal buffer ' .. bufnr })
   end
 
   obj.close_win = function(self)
@@ -49,7 +59,9 @@ function State.new(cfg)
   end
 
   obj.is_valid = function(self)
-    return self.bufnr ~= nil and vim.api.nvim_buf_is_valid(self.bufnr)
+    local bufnr = self.current_term and self.current_term.bufnr
+    bufnr = bufnr or -1
+    return vim.api.nvim_buf_is_valid(bufnr)
   end
 
   obj.show = function(self)
