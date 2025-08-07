@@ -14,11 +14,13 @@ end
 
 ---@class TabTerminalState
 ---@field winid number|nil
----@field current_term Terminal|nil
 ---@field config TabTerminalConfig
+---@field current_term Terminal|nil
+---@field terms Terminal[]
 ---@field is_win_open fun(self: TabTerminalState): boolean
 ---@field open_win fun(self: TabTerminalState)
 ---@field close_win fun(self: TabTerminalState)
+---@field _get_terms fun(self: TabTerminalState): Terminal[]
 ---@field add_term fun(self: TabTerminalState)
 ---@field move_next fun(self: TabTerminalState)
 ---@field move_previous fun(self: TabTerminalState)
@@ -64,9 +66,21 @@ function State.new(cfg)
     vim.api.nvim_win_close(self.winid, true)
   end
 
+  obj._get_terms = function(self)
+    local terms = {}
+    for _, term in ipairs(self.terms) do
+      if vim.api.nvim_buf_is_valid(term.bufnr) then
+        table.insert(terms, term)
+      end
+    end
+    self.terms = terms
+    return terms
+  end
+
   obj.add_term = function(self)
+    local terms = self:_get_terms()
     local term = new_terminal()
-    table.insert(self.terms, term)
+    table.insert(terms, term)
   end
 
   obj.move_next = function(self)
@@ -75,17 +89,18 @@ function State.new(cfg)
     end
 
     local current_index = 0
-    for i, term in ipairs(self.terms) do
+    local terms = self:_get_terms()
+    for i, term in ipairs(terms) do
       if term.bufnr == self.current_term.bufnr then
         current_index = i
         break
       end
     end
-    local next_index = (current_index + 1) % (#self.terms + 1)
+    local next_index = (current_index + 1) % (#terms + 1)
     if next_index == 0 then
       next_index = 1
     end
-    local term = self.terms[next_index]
+    local term = terms[next_index]
     self.current_term = term
     vim.api.nvim_set_current_buf(term.bufnr)
     self:update_winbar()
@@ -97,7 +112,8 @@ function State.new(cfg)
     end
 
     local current_index = 0
-    for i, term in ipairs(self.terms) do
+    local terms = self:_get_terms()
+    for i, term in ipairs(terms) do
       if term.bufnr == self.current_term.bufnr then
         current_index = i
         break
@@ -105,9 +121,9 @@ function State.new(cfg)
     end
     local prev_index = current_index - 1
     if prev_index == 0 then
-      prev_index = #self.terms
+      prev_index = #terms
     end
-    local term = self.terms[prev_index]
+    local term = terms[prev_index]
     self.current_term = term
     vim.api.nvim_set_current_buf(term.bufnr)
     self:update_winbar()
@@ -123,11 +139,12 @@ function State.new(cfg)
     if not self:is_win_open() then
       return
     end
+    local terms = self:_get_terms()
     local winbar_txt = ''
-    for i, term in ipairs(self.terms) do
+    for i, term in ipairs(terms) do
       local prefix = self.current_term.bufnr == term.bufnr and '*' or ''
       winbar_txt = winbar_txt .. prefix .. term.display_name
-      if i < #self.terms then
+      if i < #terms then
         winbar_txt = winbar_txt .. ' | '
       end
     end
