@@ -24,10 +24,15 @@ end
 ---@field close_win fun(self: TabTerminalState)
 ---@field _get_terms fun(self: TabTerminalState): Terminal[]
 ---@field add_term fun(self: TabTerminalState)
+---@field get_term fun(self: TabTerminalState, term_id: number): Terminal|nil
+---@field set_term fun(self: TabTerminalState, term_id: number)
+---@field rename_term fun(self: TabTerminalState, term_id: number)
+---@field shutdown_term fun(self: TabTerminalState, term_id: number)
 ---@field shutdown_current_term fun(self: TabTerminalState)
 ---@field move_next fun(self: TabTerminalState)
 ---@field move_previous fun(self: TabTerminalState)
 ---@field update_winbar fun(self: TabTerminalState)
+---@field term_name fun(self: TabTerminalState, term: Terminal, is_current: boolean): string
 ---@field show fun(self: TabTerminalState)
 
 ---@param cfg TabTerminalConfig
@@ -108,8 +113,46 @@ function State.new(cfg)
     self:update_winbar()
   end
 
+  obj.set_term = function(self, term_id)
+    local term = self:get_term(term_id)
+    if not term then
+      return
+    end
+    self.current_term = term
+    vim.api.nvim_set_current_buf(term.bufnr)
+    self:update_winbar()
+  end
+
+  obj.get_term = function(self, term_id)
+    local terms = self:_get_terms()
+    for _, term in ipairs(terms) do
+      if term.id == term_id then
+        return term
+      end
+    end
+    return nil
+  end
+
+  obj.shutdown_term = function(self, term_id)
+    local term = self:get_term(term_id)
+    if not term then
+      return
+    end
+
+    -- 現在のターミナルを閉じるときは次のターミナルに移動する。
+    if term.bufnr == self.current_term.bufnr then
+      self:move_next()
+    end
+
+    term:shutdown()
+    self:update_winbar()
+  end
+
   obj.shutdown_current_term = function(self)
     local current_term = self.current_term
+    if current_term == nil or not vim.api.nvim_buf_is_valid(current_term.bufnr) then
+      return
+    end
     local terms = self:_get_terms()
     if #terms == 1 then
       -- FIXME: すべてのターミナルを閉じる -> 新しいターミナルを開く -> ターミナルを閉じると何故か window の focus が terminal の window とは別のところになってしまう。
@@ -120,6 +163,19 @@ function State.new(cfg)
 
     current_term:shutdown()
     self:update_winbar()
+  end
+
+  obj.rename_term = function(self, term_id)
+    local term = self:get_term(term_id)
+    if not term then
+      return
+    end
+
+    local new_name = vim.fn.input('New name for terminal ' .. term_id .. ': ', term.display_name or '')
+    if new_name ~= '' then
+      term.display_name = new_name
+      self:update_winbar()
+    end
   end
 
   obj.move_next = function(self)
@@ -168,20 +224,32 @@ function State.new(cfg)
     self:update_winbar()
   end
 
+  obj.term_name = function(self, term, is_current)
+    local name = term.display_name or ('terminal ' .. term.id)
+    if is_current then
+      return '* ' .. name
+    else
+      return name
+    end
+  end
+
   obj.update_winbar = function(self)
     if not self:is_win_open() then
       return
     end
+
+    local current_term = self:_get_current_term()
+    local winbar_text_format = "%%%d@v:lua.require'tabterm'.winbar_click_handler@[%s]%%T"
+    local winbar_text = ''
     local terms = self:_get_terms()
-    local winbar_txt = ''
     for i, term in ipairs(terms) do
-      local prefix = self.current_term.bufnr == term.bufnr and '*' or ''
-      winbar_txt = winbar_txt .. prefix .. term.display_name
+      winbar_text = winbar_text .. string.format(winbar_text_format, term.id, self:term_name(term, term.id == current_term.id))
       if i < #terms then
-        winbar_txt = winbar_txt .. ' | '
+        winbar_text = winbar_text .. ' | '
       end
     end
-    vim.api.nvim_set_option_value('winbar', winbar_txt, { win = self.winid })
+
+    vim.api.nvim_set_option_value('winbar', winbar_text, { win = self.winid })
   end
 
   obj.show = function(self)

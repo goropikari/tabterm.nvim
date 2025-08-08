@@ -90,4 +90,20 @@ function M.show()
   M.get_current_state():show()
 end
 
+function M.winbar_click_handler(term_id, clicks, button, mods)
+  local state = M.get_current_state()
+  if term_id == nil then
+    return
+  end
+  if button == 'l' then
+    state:set_term(term_id)
+  end
+  if button == 'm' then
+    state:shutdown_term(term_id)
+  end
+  if button == 'r' then
+    state:rename_term(term_id)
+  end
+end
+
 return M
