@@ -22,6 +22,7 @@ function M.setup(opts)
   set_keymap({ 'n', 't' }, 'add', M.add_term, 'Add Terminal')
   set_keymap({ 'n', 't' }, 'move_next', M.move_next, 'Move Next Terminal')
   set_keymap({ 'n', 't' }, 'move_previous', M.move_previous, 'Move Previous Terminal')
+  set_keymap({ 'n' }, 'shutdown_current_term', M.shutdown_current_term, 'Shutdown Current Terminal')
   M.new_state()
 end
 
@@ -39,7 +40,7 @@ end
 
 ---@return boolean
 function M.is_valid_state(state)
-  return state ~= nil and state:is_valid()
+  return state ~= nil
 end
 
 ---@return TabTerminalState
@@ -65,7 +66,6 @@ function M.add_term()
   local state = M.get_current_state()
   assert(M.is_valid_state(state))
   state:add_term()
-  state:update_winbar()
 end
 
 function M.move_next()
@@ -78,6 +78,12 @@ function M.move_previous()
   local state = M.get_current_state()
   assert(M.is_valid_state(state))
   state:move_previous()
+end
+
+function M.shutdown_current_term()
+  local state = M.get_current_state()
+  assert(M.is_valid_state(state))
+  state:shutdown_current_term()
 end
 
 function M.show()

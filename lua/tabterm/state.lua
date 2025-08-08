@@ -17,32 +17,57 @@ end
 ---@field config TabTerminalConfig
 ---@field current_term Terminal|nil
 ---@field terms Terminal[]
+---@field init fun(self: TabTerminalState): TabTerminalState
 ---@field is_win_open fun(self: TabTerminalState): boolean
+---@field _get_current_term fun(self: TabTerminalState): Terminal
 ---@field open_win fun(self: TabTerminalState)
 ---@field close_win fun(self: TabTerminalState)
 ---@field _get_terms fun(self: TabTerminalState): Terminal[]
 ---@field add_term fun(self: TabTerminalState)
+---@field shutdown_current_term fun(self: TabTerminalState)
 ---@field move_next fun(self: TabTerminalState)
 ---@field move_previous fun(self: TabTerminalState)
 ---@field update_winbar fun(self: TabTerminalState)
----@field is_valid fun(self: TabTerminalState): boolean
 ---@field show fun(self: TabTerminalState)
 
 ---@param cfg TabTerminalConfig
 function State.new(cfg)
-  local init_term = new_terminal()
-
   ---@type TabTerminalState
   ---@diagnostic disable-next-line: missing-fields
   local obj = {
     winid = nil,
     config = cfg or Config.new(),
-    current_term = init_term,
-    terms = { init_term },
+    current_term = nil,
+    terms = {},
   }
+
+  obj.init = function(self)
+    local term = new_terminal()
+    self.winid = nil
+    self.current_term = term
+    self.terms = { term }
+    return self
+  end
 
   obj.is_win_open = function(self)
     return self.winid ~= nil and vim.api.nvim_win_is_valid(self.winid)
+  end
+
+  obj._get_current_term = function(self)
+    local current_term = self.current_term
+    if current_term and vim.api.nvim_buf_is_valid(current_term.bufnr) then
+      return current_term
+    end
+    local terms = self:_get_terms()
+    if #terms == 0 then
+      current_term = new_terminal()
+      self.current_term = current_term
+      self.terms = { current_term }
+    else
+      current_term = terms[1]
+      self.current_term = current_term
+    end
+    return self.current_term
   end
 
   obj.open_win = function(self)
@@ -50,7 +75,7 @@ function State.new(cfg)
     if self:is_win_open() then
       return
     end
-    local bufnr = self.current_term.bufnr
+    local bufnr = self:_get_current_term().bufnr
     self.winid = vim.api.nvim_open_win(bufnr, true, {
       split = 'below',
       height = math.floor(vim.o.lines * height),
@@ -81,6 +106,21 @@ function State.new(cfg)
     local terms = self:_get_terms()
     local term = new_terminal()
     table.insert(terms, term)
+    self:update_winbar()
+  end
+
+  obj.shutdown_current_term = function(self)
+    local current_term = self.current_term
+    local terms = self:_get_terms()
+    if #terms == 1 then
+      -- FIXME: すべてのターミナルを閉じる -> 新しいターミナルを開く -> ターミナルを閉じると何故か window の focus が terminal の window とは別のところになってしまう。
+      -- ターミナルを追加する操作を入れておくと focus が terminal window のままになる。
+      self:add_term()
+    end
+    self:move_next()
+
+    current_term:shutdown()
+    self:update_winbar()
   end
 
   obj.move_next = function(self)
@@ -129,12 +169,6 @@ function State.new(cfg)
     self:update_winbar()
   end
 
-  obj.is_valid = function(self)
-    local bufnr = self.current_term and self.current_term.bufnr
-    bufnr = bufnr or -1
-    return vim.api.nvim_buf_is_valid(bufnr)
-  end
-
   obj.update_winbar = function(self)
     if not self:is_win_open() then
       return
@@ -152,10 +186,10 @@ function State.new(cfg)
   end
 
   obj.show = function(self)
-    vim.print(self)
+    vim.print(self.terms)
   end
 
-  return obj
+  return obj:init()
 end
 
 return State

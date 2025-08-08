@@ -16,6 +16,7 @@ function Config.new()
       add = '<c-n>',
       move_next = '<M-n>',
       move_previous = '<M-h>',
+      shutdown_current_term = '<M-w>',
     },
   }
 
