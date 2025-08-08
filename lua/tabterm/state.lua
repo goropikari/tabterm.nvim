@@ -71,14 +71,13 @@ function State.new(cfg)
   end
 
   obj.open_win = function(self)
-    local height = 0.4
     if self:is_win_open() then
       return
     end
     local bufnr = self:_get_current_term().bufnr
     self.winid = vim.api.nvim_open_win(bufnr, true, {
       split = 'below',
-      height = math.floor(vim.o.lines * height),
+      height = math.floor(vim.o.lines * self.config.height),
       style = 'minimal',
     })
     obj:update_winbar()

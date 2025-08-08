@@ -1,6 +1,7 @@
 local Config = {}
 
 ---@class TabTerminalConfig
+---@field height number
 ---@field keymap table<string, string>
 ---@field setup fun(self: TabTerminalConfig, opts: table<string, string>): TabTerminalConfig
 ---@field get_keymap fun(self: TabTerminalConfig, key: string): string
@@ -11,6 +12,7 @@ function Config.new()
   ---@type TabTerminalConfig
   ---@diagnostic disable-next-line: missing-fields
   local obj = {
+    height = 0.4,
     keymap = {
       toggle = '<c-t>',
       add = '<c-n>',
