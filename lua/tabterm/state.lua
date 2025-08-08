@@ -34,7 +34,7 @@ function State.new(cfg)
   ---@diagnostic disable-next-line: missing-fields
   local obj = {
     winid = nil,
-    config = cfg or Config.new(),
+    config = cfg,
     current_term = nil,
     terms = {},
   }

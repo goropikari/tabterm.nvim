@@ -107,14 +107,14 @@ function M.send_line_text()
   assert(M.is_valid_state(state))
   local line = vim.api.nvim_get_current_line()
 
-  state:get_current_term():send(line)
+  state:_get_current_term():send(line)
 end
 
 function M.send_visual_selection()
   local state = M.get_current_state()
   assert(M.is_valid_state(state))
   local text = get_visual_text()
-  state:get_current_term():send(text)
+  state:_get_current_term():send(text)
 end
 
 function M.show()
