@@ -1,17 +1,18 @@
 local Config = {}
 
 ---@class TabTerminalConfig
+---@field shell string
 ---@field height number
 ---@field keymap table<string, string>
----@field setup fun(self: TabTerminalConfig, opts: table<string, string>): TabTerminalConfig
+---@field setup fun(self: TabTerminalConfig, opts: TabTerminalOptions): TabTerminalConfig
 ---@field get_keymap fun(self: TabTerminalConfig, key: string): string
----@field set_keymap fun(self: TabTerminalConfig, modes: string | string[], key: string, cb: fun(), desc?: string)
 
 ---@return TabTerminalConfig
 function Config.new()
   ---@type TabTerminalConfig
   ---@diagnostic disable-next-line: missing-fields
   local obj = {
+    shell = vim.o.shell or 'bash',
     height = 0.4,
     keymap = {
       toggle = '<c-t>',
@@ -23,7 +24,9 @@ function Config.new()
   }
 
   obj.setup = function(self, opts)
-    self.keymap = vim.tbl_deep_extend('force', self.keymap, opts or {})
+    obj.height = opts.height or obj.height
+    obj.shell = opts.shell or obj.shell
+    obj.keymap = vim.tbl_deep_extend('force', obj.keymap, opts.keymap or {})
     return self
   end
 
