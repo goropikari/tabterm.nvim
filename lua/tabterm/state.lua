@@ -85,6 +85,7 @@ function State.new(cfg)
       height = math.floor(vim.o.lines * self.config.height),
       style = 'minimal',
     })
+    vim.cmd('wincmd J')
     obj:update_winbar()
   end
 
