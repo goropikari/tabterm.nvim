@@ -7,6 +7,8 @@ local M = {
 }
 
 ---@class TabTerminalOptions
+---@field shell string
+---@field height number
 ---@field keymap table<string, string>
 
 local function set_keymap(modes, key, cb, desc)
@@ -19,10 +21,6 @@ function M.setup(opts)
   M.config = Config.new():setup(opts or {})
 
   set_keymap({ 'n', 't' }, 'toggle', M.toggle, 'Toggle')
-  set_keymap({ 'n', 't' }, 'add', M.add_term, 'Add Terminal')
-  set_keymap({ 'n', 't' }, 'move_next', M.move_next, 'Move Next Terminal')
-  set_keymap({ 'n', 't' }, 'move_previous', M.move_previous, 'Move Previous Terminal')
-  set_keymap({ 'n' }, 'shutdown_current_term', M.shutdown_current_term, 'Shutdown Current Terminal')
   M.new_state()
 end
 
@@ -90,6 +88,7 @@ function M.show()
   M.get_current_state():show()
 end
 
+---@diagnostic disable-next-line: unused-local
 function M.winbar_click_handler(term_id, clicks, button, mods)
   local state = M.get_current_state()
   if term_id == nil then

@@ -36,11 +36,6 @@ function Config.new()
     return keybind
   end
 
-  obj.set_keymap = function(self, modes, key, cb, desc)
-    local keymap = self:get_keymap(key)
-    vim.keymap.set(modes, keymap, cb, { desc = desc or '' })
-  end
-
   return obj
 end
 

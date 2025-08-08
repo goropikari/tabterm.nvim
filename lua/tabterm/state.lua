@@ -3,15 +3,6 @@ local Config = require('tabterm.config')
 
 State = {}
 
-local function new_terminal()
-  local term = Terminal:new({
-    cmd = 'bash',
-  })
-  term:spawn()
-  term.display_name = 'terminal ' .. term.id
-  return term
-end
-
 ---@class TabTerminalState
 ---@field winid number|nil
 ---@field config TabTerminalConfig
@@ -23,6 +14,8 @@ end
 ---@field open_win fun(self: TabTerminalState)
 ---@field close_win fun(self: TabTerminalState)
 ---@field _get_terms fun(self: TabTerminalState): Terminal[]
+---@field _set_keymap fun(self: TabTerminalState, bufnr: number)
+---@field _new_terminal fun(self: TabTerminalState): Terminal
 ---@field add_term fun(self: TabTerminalState)
 ---@field get_term fun(self: TabTerminalState, term_id: number): Terminal|nil
 ---@field set_term fun(self: TabTerminalState, term_id: number)
@@ -47,7 +40,7 @@ function State.new(cfg)
   }
 
   obj.init = function(self)
-    local term = new_terminal()
+    local term = self:_new_terminal()
     self.winid = nil
     self.current_term = term
     self.terms = { term }
@@ -65,7 +58,7 @@ function State.new(cfg)
     end
     local terms = self:_get_terms()
     if #terms == 0 then
-      current_term = new_terminal()
+      current_term = self:_new_terminal()
       self.current_term = current_term
       self.terms = { current_term }
     else
@@ -82,10 +75,11 @@ function State.new(cfg)
     local bufnr = self:_get_current_term().bufnr
     self.winid = vim.api.nvim_open_win(bufnr, true, {
       split = 'below',
-      height = math.floor(vim.o.lines * self.config.height),
       style = 'minimal',
     })
     vim.cmd('wincmd J')
+    local height = math.floor(vim.o.lines * self.config.height)
+    vim.api.nvim_win_set_height(self.winid, height)
     obj:update_winbar()
   end
 
@@ -107,9 +101,39 @@ function State.new(cfg)
     return terms
   end
 
+  local function set_keymap(bufnr, modes, key, cb, desc)
+    local keymap = obj.config:get_keymap(key)
+    vim.keymap.set(modes, keymap, cb, { buffer = bufnr, desc = desc or '' })
+  end
+
+  obj._set_keymap = function(self, bufnr)
+    set_keymap(bufnr, { 'n', 't' }, 'add', function()
+      self:add_term()
+    end, 'Add Terminal')
+    set_keymap(bufnr, { 'n', 't' }, 'move_next', function()
+      self:move_next()
+    end, 'Move Next Terminal')
+    set_keymap(bufnr, { 'n', 't' }, 'move_previous', function()
+      self:move_previous()
+    end, 'Move Previous Terminal')
+    set_keymap(bufnr, { 'n' }, 'shutdown_current_term', function()
+      self:shutdown_current_term()
+    end, 'Shutdown Current Terminal')
+  end
+
+  obj._new_terminal = function(self)
+    local term = Terminal:new({
+      cmd = self.config.shell,
+    })
+    term:spawn()
+    term.display_name = 'terminal ' .. term.id
+    self:_set_keymap(term.bufnr)
+    return term
+  end
+
   obj.add_term = function(self)
     local terms = self:_get_terms()
-    local term = new_terminal()
+    local term = self:_new_terminal()
     table.insert(terms, term)
     self:update_winbar()
   end
@@ -254,7 +278,7 @@ function State.new(cfg)
   end
 
   obj.show = function(self)
-    vim.print(self.terms)
+    vim.print(self)
   end
 
   return obj:init()
