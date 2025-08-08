@@ -249,6 +249,7 @@ function State.new(cfg)
     self:update_winbar()
   end
 
+  ---@diagnostic disable-next-line: unused-local
   obj.term_name = function(self, term, is_current)
     local name = term.display_name or ('terminal ' .. term.id)
     if is_current then

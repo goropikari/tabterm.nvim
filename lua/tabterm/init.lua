@@ -21,6 +21,8 @@ function M.setup(opts)
   M.config = Config.new():setup(opts or {})
 
   set_keymap({ 'n', 't' }, 'toggle', M.toggle, 'Toggle')
+  set_keymap({ 'n' }, 'send_line', M.send_line_text, 'Send Line Text')
+  set_keymap({ 'v' }, 'send_visual', M.send_visual_selection, 'Send Visual Selection')
   M.new_state()
 end
 
@@ -82,6 +84,37 @@ function M.shutdown_current_term()
   local state = M.get_current_state()
   assert(M.is_valid_state(state))
   state:shutdown_current_term()
+end
+
+local function get_visual_lines(opts)
+  if vim.fn.mode() == 'n' then -- command から使う用
+    return vim.fn.getline(opts.line1, opts.line2)
+  else -- <leader> key を使った keymap 用
+    local lines = vim.fn.getregion(vim.fn.getpos('v'), vim.fn.getpos('.'), { type = vim.fn.mode() })
+    -- https://github.com/neovim/neovim/discussions/26092
+    vim.cmd([[ execute "normal! \<ESC>" ]])
+    return lines
+  end
+end
+
+local function get_visual_text(opts)
+  local texts = get_visual_lines(opts or {})
+  return vim.fn.join(texts, '\n') ---@diagnostic disable-line
+end
+
+function M.send_line_text()
+  local state = M.get_current_state()
+  assert(M.is_valid_state(state))
+  local line = vim.api.nvim_get_current_line()
+
+  state:get_current_term():send(line)
+end
+
+function M.send_visual_selection()
+  local state = M.get_current_state()
+  assert(M.is_valid_state(state))
+  local text = get_visual_text()
+  state:get_current_term():send(text)
 end
 
 function M.show()
