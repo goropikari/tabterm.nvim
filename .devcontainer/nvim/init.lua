@@ -56,7 +56,10 @@ require('lazy').setup({
         },
       },
       dev = true,
-      opts = {},
+      opts = {
+        shell = 'bash',
+        height = 0.7,
+      },
     },
   },
   dev = {
