@@ -15,5 +15,12 @@
       "target": "/home/vscode/.config/nvim",
       "type": "bind"
     }
-  ]
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitHub.copilot-chat"
+      ]
+    }
+  }
 }
