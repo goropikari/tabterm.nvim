@@ -144,7 +144,7 @@ function State.new(cfg)
       return
     end
     self.current_term = term
-    vim.api.nvim_set_current_buf(term.bufnr)
+    vim.api.nvim_win_set_buf(self.winid, term.bufnr)
     self:update_winbar()
   end
 
