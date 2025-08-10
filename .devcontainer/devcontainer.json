@@ -4,7 +4,9 @@
   "name": "Ubuntu",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "features": {
-    "ghcr.io/goropikari/devcontainer-feature/neovim:1": {}
+    "ghcr.io/goropikari/devcontainer-feature/neovim:1": {
+      "version": "v0.11.3"
+    }
   },
   "containerEnv": {
     "EDITOR": "nvim"

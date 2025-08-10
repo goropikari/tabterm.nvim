@@ -13,10 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Neovim
-        uses: neovim/nvim-setup@v1
+      - name: Run tests in devcontainer
+        uses: devcontainers/ci@v0.3
         with:
-          neovim_version: stable
-
-      - name: Run tests
-        run: make test
+          runCmd: make test
