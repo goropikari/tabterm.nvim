@@ -9,14 +9,14 @@ lint:
 .PHONY: check
 check: lint fmt
 
-.PHONY: devc-up
-devc-up:
+.PHONY: up
+up:
 	devcontainer up --workspace-folder=.
 
-.PHONY: devc-up-new
-devc-up-new:
+.PHONY: up-new
+up-new:
 	devcontainer up --workspace-folder=. --remove-existing-container
 
-.PHONY: devc-exec
-devc-exec:
+.PHONY: exec
+exec:
 	devcontainer exec --workspace-folder=. bash
