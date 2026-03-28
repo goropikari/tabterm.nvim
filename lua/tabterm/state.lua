@@ -80,6 +80,7 @@ function State.new(cfg)
     vim.cmd('wincmd J')
     local height = math.floor(vim.o.lines * self.config.height)
     vim.api.nvim_win_set_height(self.winid, height)
+    vim.opt_local.winfixbuf = true
     obj:update_winbar()
   end
 
@@ -87,6 +88,7 @@ function State.new(cfg)
     if not self:is_win_open() then
       return
     end
+    vim.opt_local.winfixbuf = false
     vim.api.nvim_win_close(self.winid, true)
   end
 
@@ -208,6 +210,9 @@ function State.new(cfg)
       return
     end
 
+    local winfixbuf = vim.opt_local.winfixbuf:get()
+    vim.opt_local.winfixbuf = false
+
     local current_index = 0
     local terms = self:_get_terms()
     for i, term in ipairs(terms) do
@@ -223,6 +228,7 @@ function State.new(cfg)
     local term = terms[next_index]
     self.current_term = term
     vim.api.nvim_set_current_buf(term.bufnr)
+    vim.opt_local.winfixbuf = winfixbuf
     self:update_winbar()
   end
 
@@ -230,6 +236,9 @@ function State.new(cfg)
     if not self:is_win_open() then
       return
     end
+
+    local winfixbuf = vim.opt_local.winfixbuf:get()
+    vim.opt_local.winfixbuf = false
 
     local current_index = 0
     local terms = self:_get_terms()
@@ -246,6 +255,7 @@ function State.new(cfg)
     local term = terms[prev_index]
     self.current_term = term
     vim.api.nvim_set_current_buf(term.bufnr)
+    vim.opt_local.winfixbuf = winfixbuf
     self:update_winbar()
   end
 
