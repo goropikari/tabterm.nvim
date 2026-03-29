@@ -17,6 +17,7 @@ describe('Config', function()
       add = '<c-n>',
       move_next = '<M-n>',
       move_previous = '<M-h>',
+      drag = '<MouseDrag1>',
       shutdown_current_term = '<M-w>',
       send_visual = '<leader>ss',
       send_line = '<leader>ss',
