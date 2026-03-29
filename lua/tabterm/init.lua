@@ -80,6 +80,12 @@ function M.move_previous()
   state:move_previous()
 end
 
+function M.set_term_at_index(index)
+  local state = M.get_current_state()
+  assert(M.is_valid_state(state))
+  state:set_term_at_index(index)
+end
+
 function M.shutdown_current_term()
   local state = M.get_current_state()
   assert(M.is_valid_state(state))
@@ -136,6 +142,29 @@ function M.winbar_click_handler(term_id, clicks, button, mods)
   if button == 'r' then
     state:rename_term(term_id)
   end
+end
+
+local function mouse_drag_cb(term_id)
+  local state = M.get_current_state()
+  local terms = state:_get_terms()
+  local current_index = 0
+  for i, term in ipairs(terms) do
+    if term.bufnr == state.current_term.bufnr then
+      current_index = i
+      break
+    end
+  end
+  -- 現在の位置からのドラッグ距離に応じて次のタブを選択
+  local next_index = math.min(current_index + 1, #terms)
+  state:set_term_at_index(next_index)
+end
+
+local function set_drag_keymap(bufnr, cfg)
+  local drag_map = cfg:get_keymap('drag')
+  if not drag_map then
+    return
+  end
+  vim.keymap.set({ 'n', 't' }, drag_map, mouse_drag_cb, { buffer = bufnr })
 end
 
 return M

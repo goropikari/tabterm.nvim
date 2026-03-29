@@ -24,6 +24,7 @@ State = {}
 ---@field shutdown_current_term fun(self: TabTerminalState)
 ---@field move_next fun(self: TabTerminalState)
 ---@field move_previous fun(self: TabTerminalState)
+---@field set_term_at_index fun(self: TabTerminalState, index: number)
 ---@field update_winbar fun(self: TabTerminalState)
 ---@field term_name fun(self: TabTerminalState, term: Terminal, is_current: boolean): string
 ---@field show fun(self: TabTerminalState)
@@ -105,7 +106,27 @@ function State.new(cfg)
 
   local function set_keymap(bufnr, modes, key, cb, desc)
     local keymap = obj.config:get_keymap(key)
-    vim.keymap.set(modes, keymap, cb, { buffer = bufnr, desc = desc or '' })
+    if keymap then
+      vim.keymap.set(modes, keymap, cb, { buffer = bufnr, desc = desc or '' })
+    end
+  end
+
+  local function set_drag_keymap(bufnr)
+    local keymap = obj.config:get_keymap('drag')
+    if keymap then
+      vim.keymap.set({ 'n', 't' }, keymap, function()
+        local terms = obj:_get_terms()
+        local current_index = 0
+        for i, term in ipairs(terms) do
+          if term.bufnr == obj.current_term.bufnr then
+            current_index = i
+            break
+          end
+        end
+        local next_index = math.min(current_index + 1, #terms)
+        obj:set_term_at_index(next_index)
+      end, { buffer = bufnr })
+    end
   end
 
   obj._set_keymap = function(self, bufnr)
@@ -121,6 +142,7 @@ function State.new(cfg)
     set_keymap(bufnr, { 'n' }, 'shutdown_current_term', function()
       self:shutdown_current_term()
     end, 'Shutdown Current Terminal')
+    set_drag_keymap(bufnr)
   end
 
   obj._new_terminal = function(self)
@@ -206,30 +228,7 @@ function State.new(cfg)
   end
 
   obj.move_next = function(self)
-    if not self:is_win_open() then
-      return
-    end
-
-    local winfixbuf = vim.opt_local.winfixbuf:get()
-    vim.opt_local.winfixbuf = false
-
-    local current_index = 0
-    local terms = self:_get_terms()
-    for i, term in ipairs(terms) do
-      if term.bufnr == self.current_term.bufnr then
-        current_index = i
-        break
-      end
-    end
-    local next_index = (current_index + 1) % (#terms + 1)
-    if next_index == 0 then
-      next_index = 1
-    end
-    local term = terms[next_index]
-    self.current_term = term
-    vim.api.nvim_set_current_buf(term.bufnr)
-    vim.opt_local.winfixbuf = winfixbuf
-    self:update_winbar()
+    self:set_term_at_index((self.current_term.bufnr == nil or #self.terms == 1) and 1 or #self.terms)
   end
 
   obj.move_previous = function(self)
@@ -253,6 +252,26 @@ function State.new(cfg)
       prev_index = #terms
     end
     local term = terms[prev_index]
+    self.current_term = term
+    vim.api.nvim_set_current_buf(term.bufnr)
+    vim.opt_local.winfixbuf = winfixbuf
+    self:update_winbar()
+  end
+
+  obj.set_term_at_index = function(self, index)
+    if not self:is_win_open() then
+      return
+    end
+
+    local terms = self:_get_terms()
+    local term = terms[index]
+    if not term then
+      return
+    end
+
+    local winfixbuf = vim.opt_local.winfixbuf:get()
+    vim.opt_local.winfixbuf = false
+
     self.current_term = term
     vim.api.nvim_set_current_buf(term.bufnr)
     vim.opt_local.winfixbuf = winfixbuf
