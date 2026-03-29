@@ -167,8 +167,12 @@ function State.new(cfg)
     if not term then
       return
     end
+    local winfixbuf = vim.opt_local.winfixbuf:get()
+    vim.opt_local.winfixbuf = false
+
     self.current_term = term
     vim.api.nvim_win_set_buf(self.winid, term.bufnr)
+    vim.opt_local.winfixbuf = winfixbuf
     self:update_winbar()
   end
 
@@ -228,7 +232,30 @@ function State.new(cfg)
   end
 
   obj.move_next = function(self)
-    self:set_term_at_index((self.current_term.bufnr == nil or #self.terms == 1) and 1 or #self.terms)
+    if not self:is_win_open() then
+      return
+    end
+
+    local winfixbuf = vim.opt_local.winfixbuf:get()
+    vim.opt_local.winfixbuf = false
+
+    local current_index = 0
+    local terms = self:_get_terms()
+    for i, term in ipairs(terms) do
+      if term.bufnr == self.current_term.bufnr then
+        current_index = i
+        break
+      end
+    end
+    local next_index = current_index + 1
+    if next_index > #terms then
+      next_index = 1
+    end
+    local term = terms[next_index]
+    self.current_term = term
+    vim.api.nvim_set_current_buf(term.bufnr)
+    vim.opt_local.winfixbuf = winfixbuf
+    self:update_winbar()
   end
 
   obj.move_previous = function(self)
